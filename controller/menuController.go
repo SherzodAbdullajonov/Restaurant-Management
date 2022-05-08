@@ -66,15 +66,18 @@ func CreateMenu() gin.HandlerFunc {
 		menu.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 		menu.ID = primitive.NewObjectID()
 		menu.Menu_id = menu.ID.Hex()
-		result, insertErr:= menuCollection.InsertOne(c, menu)
+		result, insertErr := menuCollection.InsertOne(c, menu)
 		if insertErr != nil {
-			msg:= fmt.Sprintf("Menu item was not created")
+			msg := fmt.Sprintf("Menu item was not created")
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}
 		defer cancel()
 		ctx.JSON(http.StatusOK, result)
 	}
+}
+func inTimeSpan(start, end, check time.Time) bool {
+	return start.After(time.Now()) && end.After(start)
 }
 func UpdateMenu() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
@@ -85,35 +88,48 @@ func UpdateMenu() gin.HandlerFunc {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		menuId :=ctx.Param("menu_id")
-		filter:= bson.M{"menu_id":menuId}
+		menuId := ctx.Param("menu_id")
+		filter := bson.M{"menu_id": menuId}
 
 		var updateObj primitive.D
-		if menu.Start_date != nil && menu.End_date != nil{
-			if !inTimeSpan(*menu.Start_date, *menu.End_date, time.Now()){
-				msg:= "kindly retype the time"
+		if menu.Start_date != nil && menu.End_date != nil {
+			if !inTimeSpan(*menu.Start_date, *menu.End_date, time.Now()) {
+				msg := "kindly retype the time"
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 				defer cancel()
 				return
 			}
-			updateObj = append(updateObj, bson.E{"start_date",menu.Start_date})
+			updateObj = append(updateObj, bson.E{"start_date", menu.Start_date})
 			updateObj = append(updateObj, bson.E{"end_date", menu.End_date})
-			
-			if menu.Name != ""{
-				updateObj= append(updateObj, bson.E{"name", menu.Name})
+
+			if menu.Name != "" {
+				updateObj = append(updateObj, bson.E{"name", menu.Name})
 			}
-			if menu.Category != ""{
+			if menu.Category != "" {
 				updateObj = append(updateObj, bson.E{"category", menu.Category})
 			}
 			menu.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 			updateObj = append(updateObj, bson.E{"updated_at", menu.Updated_at})
 
-			upsert:= true
+			upsert := true
 
 			opt := options.UpdateOptions{
 				Upsert: &upsert,
 			}
-			result, err:=menu.Collection.
+			result, err := menuCollection.UpdateOne(
+				c,
+				filter,
+				bson.D{
+					{"$set", updateObj},
+				},
+				&opt,
+			)
+			if err != nil {
+				msg := "Menu update failed"
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			}
+			defer cancel()
+			ctx.JSON(http.StatusOK, result)
 		}
 
 	}
