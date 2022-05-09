@@ -93,19 +93,20 @@ func UpdateTable() gin.HandlerFunc {
 			return
 		}
 		if table.Number_of_guests != nil {
-
+			updateObj = append(updateObj, bson.E{"number_of_guests", table.Number_of_guests})
 		}
 		if table.Table_number != nil {
+			updateObj = append(updateObj, bson.E{"table_number", table.Table_number})
 
 		}
 		table.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 		updateObj = append(updateObj, bson.E{"updated_at", table.Updated_at})
 		upsert := true
-		filter := bson.M{"order_id": orderId}
+		filter := bson.M{"table_id": tableId}
 		opt := options.UpdateOptions{
 			Upsert: &upsert,
 		}
-		result, err := orderCollection.UpdateOne(
+		result, err := tableCollection.UpdateOne(
 			c,
 			filter,
 			bson.D{
@@ -114,7 +115,7 @@ func UpdateTable() gin.HandlerFunc {
 			&opt,
 		)
 		if err != nil {
-			msg := fmt.Sprint("orders update failed")
+			msg := fmt.Sprint("table update failed")
 			ctx.JSON(http.StatusInternalServerError, msg)
 			return
 		}
