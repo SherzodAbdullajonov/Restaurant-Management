@@ -57,11 +57,14 @@ func CreateTable() gin.HandlerFunc {
 		err := ctx.BindJSON(&table)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			defer cancel()
 			return
 		}
 		validationErr := validate.Struct(table)
 		if validationErr != nil {
+			defer cancel()
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
+
 			return
 		}
 		table.Created_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
@@ -72,8 +75,10 @@ func CreateTable() gin.HandlerFunc {
 
 		result, insertErr := tableCollection.InsertOne(c, table)
 		if insertErr != nil {
-			msg := fmt.Sprint("message: error occured while inserting order")
+			msg := fmt.Sprintln("message: error occured while inserting order")
+			defer cancel()
 			ctx.JSON(http.StatusInternalServerError, gin.H{"eror": msg})
+
 			return
 		}
 
@@ -90,17 +95,18 @@ func UpdateTable() gin.HandlerFunc {
 		err := ctx.BindJSON(&table)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			defer cancel()
 			return
 		}
 		if table.Number_of_guests != nil {
-			updateObj = append(updateObj, bson.E{"number_of_guests", table.Number_of_guests})
+			updateObj = append(updateObj, bson.E{Key: "number_of_guests", Value: table.Number_of_guests})
 		}
 		if table.Table_number != nil {
-			updateObj = append(updateObj, bson.E{"table_number", table.Table_number})
+			updateObj = append(updateObj, bson.E{Key: "table_number", Value: table.Table_number})
 
 		}
 		table.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-		updateObj = append(updateObj, bson.E{"updated_at", table.Updated_at})
+		updateObj = append(updateObj, bson.E{Key: "updated_at", Value: table.Updated_at})
 		upsert := true
 		filter := bson.M{"table_id": tableId}
 		opt := options.UpdateOptions{
@@ -110,13 +116,14 @@ func UpdateTable() gin.HandlerFunc {
 			c,
 			filter,
 			bson.D{
-				{"$set", updateObj},
+				{Key: "$set", Value: updateObj},
 			},
 			&opt,
 		)
 		if err != nil {
-			msg := fmt.Sprint("table update failed")
+			msg := fmt.Sprintln("table update failed")
 			ctx.JSON(http.StatusInternalServerError, msg)
+			defer cancel()
 			return
 		}
 		defer cancel()

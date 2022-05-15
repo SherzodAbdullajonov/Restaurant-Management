@@ -70,7 +70,7 @@ func CreateOrder() gin.HandlerFunc {
 			err := tableCollection.FindOne(c, bson.M{"table_id": order.Table_id}).Decode(&table)
 			defer cancel()
 			if err != nil {
-				msg := fmt.Sprint("message: Table not found")
+				msg := fmt.Sprintln("message: Table not found")
 				ctx.JSON(http.StatusInternalServerError, msg)
 				return
 			}
@@ -83,7 +83,7 @@ func CreateOrder() gin.HandlerFunc {
 
 		result, err := orderCollection.InsertOne(c, order)
 		if err != nil {
-			msg := fmt.Sprint("message: error occured while inserting order")
+			msg := fmt.Sprintln("message: error occured while inserting order")
 			ctx.JSON(http.StatusInternalServerError, gin.H{"eror": msg})
 			return
 		}
@@ -110,7 +110,7 @@ func UpdateOrder() gin.HandlerFunc {
 			err := orderCollection.FindOne(c, bson.M{"table_id": order.Table_id}).Decode(&table)
 			defer cancel()
 			if err != nil {
-				msg := fmt.Sprint("message: Menu was not found")
+				msg := fmt.Sprintln("message: Menu was not found")
 				ctx.JSON(http.StatusInternalServerError, msg)
 				return
 			}
@@ -133,7 +133,7 @@ func UpdateOrder() gin.HandlerFunc {
 			&opt,
 		)
 		if err != nil {
-			msg := fmt.Sprint("orders update failed")
+			msg := fmt.Sprintln("orders update failed")
 			ctx.JSON(http.StatusInternalServerError, msg)
 			return
 		}

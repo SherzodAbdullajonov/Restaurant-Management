@@ -16,7 +16,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var menuController *mongo.Collection = database.OpenCollection(database.Client, "menu")
+var menuCollection *mongo.Collection = database.OpenCollection(database.Client, "menu")
 
 func GetMenus() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
@@ -54,11 +54,14 @@ func CreateMenu() gin.HandlerFunc {
 		var menu models.Menu
 		err := ctx.BindJSON(&menu)
 		if err != nil {
+			defer cancel()
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 		validationErr := validate.Struct(menu)
 		if validationErr != nil {
+			defer cancel()
+
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
 			return
 		}
@@ -68,7 +71,8 @@ func CreateMenu() gin.HandlerFunc {
 		menu.Menu_id = menu.ID.Hex()
 		result, insertErr := menuCollection.InsertOne(c, menu)
 		if insertErr != nil {
-			msg := fmt.Sprintf("Menu item was not created")
+			msg := fmt.Sprintln("Menu item was not created")
+			defer cancel()
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}
@@ -84,7 +88,9 @@ func UpdateMenu() gin.HandlerFunc {
 		var c, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 		var menu models.Menu
 		err := ctx.BindJSON(&menu)
+		defer cancel()
 		if err != nil {
+			defer cancel()
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
@@ -95,21 +101,21 @@ func UpdateMenu() gin.HandlerFunc {
 		if menu.Start_date != nil && menu.End_date != nil {
 			if !inTimeSpan(*menu.Start_date, *menu.End_date, time.Now()) {
 				msg := "kindly retype the time"
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 				defer cancel()
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 				return
 			}
-			updateObj = append(updateObj, bson.E{"start_date", menu.Start_date})
-			updateObj = append(updateObj, bson.E{"end_date", menu.End_date})
+			updateObj = append(updateObj, bson.E{Key: "start_date", Value: menu.Start_date})
+			updateObj = append(updateObj, bson.E{Key: "end_date", Value: menu.End_date})
 
 			if menu.Name != "" {
-				updateObj = append(updateObj, bson.E{"name", menu.Name})
+				updateObj = append(updateObj, bson.E{Key: "name", Value: menu.Name})
 			}
 			if menu.Category != "" {
-				updateObj = append(updateObj, bson.E{"category", menu.Category})
+				updateObj = append(updateObj, bson.E{Key: "category", Value: menu.Category})
 			}
 			menu.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-			updateObj = append(updateObj, bson.E{"updated_at", menu.Updated_at})
+			updateObj = append(updateObj, bson.E{Key: "updated_at", Value: menu.Updated_at})
 
 			upsert := true
 
@@ -120,13 +126,15 @@ func UpdateMenu() gin.HandlerFunc {
 				c,
 				filter,
 				bson.D{
-					{"$set", updateObj},
+					{Key: "$set", Value: updateObj},
 				},
 				&opt,
 			)
 			if err != nil {
 				msg := "Menu update failed"
+				defer cancel()
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+				return
 			}
 			defer cancel()
 			ctx.JSON(http.StatusOK, result)
