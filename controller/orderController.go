@@ -57,6 +57,7 @@ func CreateOrder() gin.HandlerFunc {
 		var c, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 		var table models.Table
 		var order models.Order
+		defer cancel()
 		err := ctx.BindJSON(&order)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -97,7 +98,7 @@ func UpdateOrder() gin.HandlerFunc {
 		var c, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 		var table models.Table
 		var order models.Order
-
+		defer cancel()
 		var updateObj primitive.D
 		orderId := ctx.Param("order_id")
 		err := ctx.BindJSON(&order)
@@ -114,10 +115,10 @@ func UpdateOrder() gin.HandlerFunc {
 				ctx.JSON(http.StatusInternalServerError, msg)
 				return
 			}
-			updateObj = append(updateObj, bson.E{"table_id", order.Table_id})
+			updateObj = append(updateObj, bson.E{Key: "table_id", Value: order.Table_id})
 		}
 		order.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-		updateObj = append(updateObj, bson.E{"updated_at", order.Updated_at})
+		updateObj = append(updateObj, bson.E{Key:"updated_at", Value:order.Updated_at})
 
 		upsert := true
 		filter := bson.M{"order_id": orderId}
@@ -128,7 +129,7 @@ func UpdateOrder() gin.HandlerFunc {
 			c,
 			filter,
 			bson.D{
-				{"$set", updateObj},
+				{Key:"$set", Value:updateObj},
 			},
 			&opt,
 		)
