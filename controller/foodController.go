@@ -96,7 +96,7 @@ func CreateFood() gin.HandlerFunc {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
 		}
 		err = menuCollection.FindOne(c, bson.M{"menu_id": food.Menu_id}).Decode(&menu)
-		defer cancel()
+	
 		if err != nil {
 			msg := fmt.Sprintln("menu was not found")
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": msg})
@@ -115,7 +115,7 @@ func CreateFood() gin.HandlerFunc {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}
-		defer cancel()
+	
 		ctx.JSON(http.StatusOK, result)
 	}
 }

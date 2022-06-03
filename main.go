@@ -1,8 +1,6 @@
 package main
 
 import (
-	"os"
-
 	"github.com/SherzodAbdullajonov/restuarant-management/middleware"
 	"github.com/SherzodAbdullajonov/restuarant-management/routes"
 
@@ -10,11 +8,8 @@ import (
 )
 
 func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8000"
-	}
-	router := gin.New()
+	//port := "8000"
+	router := gin.Default()
 	router.Use(gin.Logger())
 	routes.UseRoutes(router)
 	router.Use(middleware.Authentication())
@@ -26,5 +21,5 @@ func main() {
 	routes.OrderItemRoutes(router)
 	routes.InvoiceRoutes(router)
 
-	router.Run(":", port)
+	router.Run(":8000")
 }
